@@ -1,12 +1,4 @@
-const providers = {
-  duckduckgo: (q) => `https://duckduckgo.com/?q=${encodeURIComponent(q)}`,
-  google: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
-  bing: (q) => `https://www.bing.com/search?q=${encodeURIComponent(q)}`,
-  brave: (q) => `https://search.brave.com/search?q=${encodeURIComponent(q)}`,
-};
-
 const state = {
-  provider: localStorage.getItem('venture.provider') || 'duckduckgo',
   newTab: localStorage.getItem('venture.newTab') === 'true',
   theme: localStorage.getItem('venture.theme') || 'system',
 };
@@ -17,7 +9,6 @@ const themeToggle = document.getElementById('themeToggle');
 const settingsButton = document.getElementById('settingsButton');
 const footerSettings = document.getElementById('footerSettings');
 const settingsDialog = document.getElementById('settingsDialog');
-const providerSelect = document.getElementById('providerSelect');
 const newTabToggle = document.getElementById('newTabToggle');
 
 function applyTheme() {
@@ -54,12 +45,13 @@ function destinationFor(value) {
     return `https://${query}`;
   }
 
-  return providers[state.provider](query);
+  return `https://duckduckgo.com/?q=${encodeURIComponent(query)}`;
 }
 
 function runSearch(value) {
   const destination = destinationFor(value);
   if (!destination) return;
+
   if (state.newTab) {
     window.open(destination, '_blank', 'noopener,noreferrer');
   } else {
@@ -68,7 +60,6 @@ function runSearch(value) {
 }
 
 function openSettings() {
-  providerSelect.value = state.provider;
   newTabToggle.checked = state.newTab;
   settingsDialog.showModal();
 }
@@ -83,11 +74,6 @@ settingsButton.addEventListener('click', openSettings);
 footerSettings.addEventListener('click', (event) => {
   event.preventDefault();
   openSettings();
-});
-
-providerSelect.addEventListener('change', () => {
-  state.provider = providerSelect.value;
-  localStorage.setItem('venture.provider', state.provider);
 });
 
 newTabToggle.addEventListener('change', () => {
