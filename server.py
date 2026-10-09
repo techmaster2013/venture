@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlparse
 
 DB_PATH = "venture.db"
 PORT = 826
+PORT_TEXT = "0826"
 
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -35,8 +36,6 @@ class Handler(SimpleHTTPRequestHandler):
         conn = self.db()
         if conn is None: return self.send_json({"query":q,"results":[],"indexed":0})
         try:
-            # FTS5 query terms are quoted individually so ordinary punctuation
-            # in user searches cannot become FTS syntax.
             terms = [term for term in q.split() if term]
             fts = " AND ".join('"' + term.replace('"','""') + '"' for term in terms)
             rows = conn.execute("""
@@ -52,11 +51,14 @@ class Handler(SimpleHTTPRequestHandler):
     def stats(self):
         conn = self.db()
         if conn is None: return self.send_json({"indexed":0})
-        try: count = conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0]
+        try:
+            count = conn.execute("SELECT COUNT(*) FROM pages").fetchone()[0]
+            indexed = conn.execute("SELECT COUNT(*) FROM pages_fts").fetchone()[0]
+            queued = conn.execute("SELECT COUNT(*) FROM frontier WHERE state='queued'").fetchone()[0] if conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='frontier'").fetchone() else 0
         finally: conn.close()
-        self.send_json({"indexed":count})
+        self.send_json({"stored":count,"indexed":indexed,"queued":queued})
 
 if __name__ == "__main__":
-    print(f"Venture at http://localhost:{PORT}")
+    print(f"Venture at http://localhost:{PORT_TEXT}")
     print("Search API: /api/search?q=your+query")
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
