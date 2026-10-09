@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 DB_PATH = "venture.db"
 PORT = int(os.environ.get("VENTURE_PORT", "826"))
 PORT_TEXT = f"{PORT:04d}"
+BIND = os.environ.get("VENTURE_BIND", "")
 
 def clean_terms(query): return [t.lower() for t in re.findall(r"[\w'-]+",query,flags=re.UNICODE) if t]
 def table_exists(conn,name): return bool(conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone())
@@ -126,4 +127,8 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json(data)
 
 if __name__=="__main__":
-    print(f"Venture at http://localhost:{PORT_TEXT}");print("Dashboard: /dashboard.html");print("Ranking: Venture v2 (BM25 + link authority + domain diversity)");ThreadingHTTPServer(("127.0.0.1",PORT),Handler).serve_forever()
+    shown_host="localhost" if not BIND else BIND
+    print(f"Venture at http://{shown_host}:{PORT_TEXT}")
+    print("Dashboard: /dashboard.html")
+    print("Ranking: Venture v2 (BM25 + link authority + domain diversity)")
+    ThreadingHTTPServer((BIND,PORT),Handler).serve_forever()
