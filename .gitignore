@@ -1,0 +1,7 @@
+venture.db
+venture.db-shm
+venture.db-wal
+logs/
+__pycache__/
+*.pyc
+.DS_Store
