@@ -10,82 +10,43 @@
 <body>
   <div class="page-shell">
     <header class="topbar">
-      <a class="brand small" href="index.html" aria-label="Venture home">
-        <span class="brand-mark">V</span>
-        <span>Venture</span>
-      </a>
-      <nav class="top-actions">
-        <button id="themeToggle" class="icon-btn" aria-label="Toggle theme">◐</button>
-        <button id="settingsButton" class="icon-btn" aria-label="Open settings">⚙</button>
-      </nav>
+      <a class="brand small" href="index.html" aria-label="Venture home"><span class="brand-mark">V</span><span>Venture</span></a>
+      <nav class="top-actions"><button id="themeToggle" class="icon-btn" aria-label="Toggle theme">◐</button><button id="settingsButton" class="icon-btn" aria-label="Open settings">⚙</button></nav>
     </header>
 
-    <main class="home-main">
+    <main id="homeView" class="home-main">
       <section class="hero">
-        <div class="brand hero-brand" aria-label="Venture">
-          <span class="brand-mark large">V</span>
-          <span>Venture</span>
-        </div>
+        <div class="brand hero-brand"><span class="brand-mark large">V</span><span>Venture</span></div>
         <p class="tagline">Search the web. Keep it simple.</p>
-
         <form id="searchForm" class="search-box" role="search">
           <input id="searchInput" autocomplete="off" spellcheck="false" placeholder="Search the web" aria-label="Search the web" />
           <button type="submit" class="search-btn" aria-label="Search">→</button>
         </form>
-
-        <div id="suggestions" class="suggestions" hidden></div>
-
-        <div class="quick-links" aria-label="Quick links">
-          <a href="https://wikipedia.org">Wikipedia</a>
-          <a href="https://youtube.com">YouTube</a>
-          <a href="https://github.com">GitHub</a>
-          <a href="https://reddit.com">Reddit</a>
-        </div>
+        <div class="quick-links"><a href="https://wikipedia.org">Wikipedia</a><a href="https://youtube.com">YouTube</a><a href="https://github.com">GitHub</a><a href="https://reddit.com">Reddit</a></div>
       </section>
-
-      <section class="privacy-card">
-        <div class="privacy-icon">✦</div>
-        <div>
-          <h2>Search without the clutter.</h2>
-          <p>Venture keeps the interface lightweight and uses DuckDuckGo for web search.</p>
-        </div>
-      </section>
+      <section class="privacy-card"><div class="privacy-icon">✦</div><div><h2>Venture results, without the detour.</h2><p>Searches stay inside Venture. Early results are sourced from public web search while Venture grows its own index.</p></div></section>
     </main>
 
-    <footer>
-      <span>Venture</span>
-      <span class="footer-dot">•</span>
-      <a href="#" id="footerSettings">Settings</a>
-    </footer>
+    <main id="resultsView" class="results-view" hidden>
+      <div class="results-head">
+        <a class="brand results-brand" href="index.html"><span class="brand-mark">V</span><span>Venture</span></a>
+        <form id="resultsForm" class="search-box results-search" role="search"><input id="resultsInput" autocomplete="off" spellcheck="false" aria-label="Search the web" /><button type="submit" class="search-btn">→</button></form>
+      </div>
+      <nav class="result-tabs"><button class="active">Web</button><button disabled>Images <small>soon</small></button><button disabled>News <small>soon</small></button></nav>
+      <div class="results-layout">
+        <section>
+          <p id="resultStatus" class="result-status"></p>
+          <div id="resultsList" class="results-list"></div>
+          <div id="resultError" class="result-error" hidden><h2>Couldn't load results.</h2><p>Venture's web-results bridge may be unavailable right now.</p><a id="fallbackLink" class="primary-link" target="_blank" rel="noopener noreferrer">Search with DuckDuckGo instead</a></div>
+        </section>
+        <aside class="engine-card"><span class="engine-pill">Venture v1</span><h3>Growing its own engine.</h3><p>This results UI belongs to Venture. For now, public web-search data can fill gaps while Venture's crawler and index are built.</p></aside>
+      </div>
+    </main>
+
+    <footer><span>Venture</span><span class="footer-dot">•</span><a href="#" id="footerSettings">Settings</a></footer>
   </div>
 
-  <dialog id="settingsDialog" class="settings-dialog">
-    <form method="dialog">
-      <div class="dialog-header">
-        <h2>Settings</h2>
-        <button class="icon-btn" value="cancel" aria-label="Close">×</button>
-      </div>
-
-      <div class="setting-row">
-        <span>
-          <strong>Search engine</strong>
-          <small>Venture searches the web with DuckDuckGo.</small>
-        </span>
-        <strong>DuckDuckGo</strong>
-      </div>
-
-      <label class="setting-row">
-        <span>
-          <strong>Open results in new tab</strong>
-          <small>Keep Venture open while you search.</small>
-        </span>
-        <input id="newTabToggle" type="checkbox" />
-      </label>
-
-      <button class="primary-btn" value="default">Done</button>
-    </form>
-  </dialog>
-
+  <dialog id="settingsDialog" class="settings-dialog"><form method="dialog"><div class="dialog-header"><h2>Settings</h2><button class="icon-btn" value="cancel">×</button></div><div class="setting-row"><span><strong>Results engine</strong><small>Venture UI with a temporary public web-search bridge.</small></span><strong>Venture v1</strong></div><label class="setting-row"><span><strong>Open results in new tab</strong><small>Open result links separately.</small></span><input id="newTabToggle" type="checkbox" /></label><button class="primary-btn" value="default">Done</button></form></dialog>
   <script src="app.js"></script>
 </body>
 </html>
