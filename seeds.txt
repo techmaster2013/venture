@@ -1,0 +1,13 @@
+# VentureBot starter seeds
+# Keep this list small and high-quality. VentureBot will discover more pages itself.
+
+https://en.wikipedia.org/wiki/Main_Page
+https://developer.mozilla.org/en-US/
+https://www.python.org/
+https://www.gnu.org/
+https://www.kernel.org/
+https://www.w3.org/
+https://www.nasa.gov/
+https://www.loc.gov/
+https://www.si.edu/
+https://www.britannica.com/
