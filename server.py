@@ -4,12 +4,14 @@ import math
 import os
 import re
 import sqlite3
+from html.parser import HTMLParser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
+from urllib.request import Request, urlopen
 
 DB_PATH = "venture.db"
-PORT = 826
-PORT_TEXT = "0826"
+PORT = int(os.environ.get("VENTURE_PORT", "826"))
+PORT_TEXT = f"{PORT:04d}"
 
 def clean_terms(query): return [t.lower() for t in re.findall(r"[\w'-]+",query,flags=re.UNICODE) if t]
 def table_exists(conn,name): return bool(conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",(name,)).fetchone())
@@ -28,10 +30,49 @@ def make_snippet(body,description,terms,limit=260):
         return ("…" if start else "")+snippet+("…" if end<len(text) else "")
     value=desc or text;return value[:limit]+("…" if len(value)>limit else "")
 
+def unwrap_ddg(url):
+    try:
+        parsed=urlparse(url)
+        if parsed.netloc.endswith("duckduckgo.com"):
+            uddg=parse_qs(parsed.query).get("uddg",[None])[0]
+            if uddg:return unquote(uddg)
+    except Exception:pass
+    return url
+
+class DDGParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True);self.results=[];self.current=None;self.capture=None
+    def handle_starttag(self,tag,attrs):
+        attrs=dict(attrs);cls=attrs.get("class","")
+        if tag=="a" and "result__a" in cls:
+            self.current={"url":unwrap_ddg(attrs.get("href","")),"title":"","description":""};self.capture="title"
+        elif self.current and "result__snippet" in cls:self.capture="description"
+    def handle_endtag(self,tag):
+        if self.current and self.capture=="title" and tag=="a":self.capture=None
+        elif self.current and self.capture=="description" and tag in {"a","div","span"}:
+            if self.current["url"] and self.current["title"]:self.results.append(self.current)
+            self.current=None;self.capture=None
+    def handle_data(self,data):
+        if self.current and self.capture:self.current[self.capture]+=(" " if self.current[self.capture] else "")+data.strip()
+
+def ddg_search(query):
+    req=Request("https://html.duckduckgo.com/html/?q="+__import__("urllib.parse").parse.quote_plus(query),headers={"User-Agent":"Mozilla/5.0 Venture/0.2","Accept-Language":"en-US,en;q=0.8"})
+    with urlopen(req,timeout=8) as response:html=response.read(2_000_000).decode("utf-8","replace")
+    parser=DDGParser();parser.feed(html);out=[];seen=set()
+    for item in parser.results:
+        if item["url"] in seen:continue
+        seen.add(item["url"])
+        try:item["domain"]=urlparse(item["url"]).hostname or ""
+        except Exception:item["domain"]=""
+        item["source"]="DuckDuckGo";out.append(item)
+        if len(out)>=20:break
+    return out
+
 class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         parsed=urlparse(self.path)
         if parsed.path=="/api/search":return self.search(parsed)
+        if parsed.path=="/api/fallback":return self.fallback(parsed)
         if parsed.path=="/api/stats":return self.stats()
         if parsed.path=="/api/crawl-status":return self.crawl_status()
         return super().do_GET()
@@ -53,7 +94,7 @@ class Handler(SimpleHTTPRequestHandler):
             rows=conn.execute("SELECT f.url,f.title,f.description,f.domain,p.body,bm25(pages_fts,0,8,4,1,2) bm25_score FROM pages_fts f LEFT JOIN pages p ON p.url=f.url WHERE pages_fts MATCH ? ORDER BY bm25_score LIMIT 80",(fts,)).fetchall();auth=authority_scores(conn,[r["url"] for r in rows]);ranked=[];qlower=q.lower()
             for r in rows:
                 title=r["title"] or "";domain=r["domain"] or "";a=auth.get(r["url"],0.0);score=-float(r["bm25_score"] or 0)+(2.0 if qlower in title.lower() else 0)+(0.8 if any(t in domain.lower() for t in terms) else 0)+a*.65
-                ranked.append({"url":r["url"],"title":title or r["url"],"description":make_snippet(r["body"],r["description"],terms),"domain":domain,"score":round(score,5),"authority":round(a,3)})
+                ranked.append({"url":r["url"],"title":title or r["url"],"description":make_snippet(r["body"],r["description"],terms),"domain":domain,"score":round(score,5),"authority":round(a,3),"source":"Venture"})
             ranked.sort(key=lambda x:x["score"],reverse=True);diverse=[];overflow=[];seen={}
             for item in ranked:
                 d=item["domain"];n=seen.get(d,0)
@@ -62,6 +103,11 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_json({"query":q,"indexed":self.counts(conn)["stored"],"ranking":"venture-v2","results":(diverse+overflow)[:20]})
         except sqlite3.Error as exc:return self.send_json({"error":str(exc),"results":[]},500)
         finally:conn.close()
+    def fallback(self,parsed):
+        q=parse_qs(parsed.query).get("q",[""])[0].strip()
+        if not q:return self.send_json({"query":"","results":[]})
+        try:return self.send_json({"query":q,"provider":"DuckDuckGo","results":ddg_search(q)})
+        except Exception as exc:return self.send_json({"query":q,"provider":"DuckDuckGo","results":[],"error":str(exc)},502)
     def stats(self):
         conn=self.db()
         if conn is None:return self.send_json({"indexed":0,"ranking":"venture-v2"})
